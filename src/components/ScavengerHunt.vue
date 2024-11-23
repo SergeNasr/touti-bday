@@ -2,8 +2,35 @@
     <div id="app" class="app-container">
         <!-- Landing Page -->
         <div v-if="currentStep === 0" class="landing-page">
-            <h1>Welcome Touti!</h1>
-            <button @click="startHunt" class="start-button">Get Started</button>
+            <h1>Hoaiiii Touti!</h1>
+            <p>
+                On May 13th, 2024, you sent me the following text:
+            </p>
+            <br>
+            <img src="@/assets/touti-screenshot.png" alt="Touti Screenshot" class="screenshot-image"
+                style="width: 75%;" />
+            <p>
+                The context of the conversation is irrelevant.<br>
+                All you need to know is that I took a screenshot of this message and been waiting for the perfect
+                opportunity to use it.
+            </p>
+            <br>
+            <p>
+                It's December 5th, 2024 - a very special date.<br>
+                Today is not only your birthday, but also the day we put your skills to the test!
+            </p>
+            <br>
+            <p>
+                Without further ado, here's what we're going to do.
+            </p>
+            <br>
+            <p>
+                We will be embarking on a journey, together. A scavenger hunt in London.<br>
+                In order for us to know our destination, you'll have to solve a riddle.<br>
+                Solve the riddle and you unlock a new step in our journey.<br>
+                Fail to do so and we're stuck in London.<br>
+            </p>
+            <button @click="startHunt" class="start-button">Let the games begin</button>
         </div>
 
         <!-- Congratulatory Message -->
@@ -21,32 +48,62 @@
             <transition-group name="fade" tag="div">
                 <div v-for="(riddle, index) in riddles" :key="index" class="riddle-section"
                     :class="{ 'solved-riddle': riddle.isSolved }" v-show="currentStep > index">
-                    <h2>Riddle {{ index + 1 }}</h2>
-                    <p>{{ riddle.question }}</p>
-                    <input type="text" v-model="riddle.userAnswer" placeholder="Enter your answer"
-                        @keyup.enter="checkAnswer(index)" />
-                    <button v-if="!riddle.isSolved" @click="checkAnswer(index)" class="submit-button">Submit</button>
-                    <p v-if="riddle.isSolved" class="location-message">{{ riddle.locationMessage }}</p>
-                    <p v-else-if="riddle.hasAttempted && !riddle.isSolved" class="error-message">Incorrect! Try again.
-                    </p>
-                    <button v-if="riddle.isSolved && currentStep === index + 1 && index < riddles.length - 1"
-                        @click="nextRiddle" class="next-button">Next Riddle</button>
-                    <button v-if="riddle.isSolved && index === riddles.length - 1" @click="completeHunt"
-                        class="next-button">I'm a Tokii</button>
+                    <h2 v-if="index < riddles.length">Riddle {{ index + 1 }}</h2>
+                    <p v-if="index < riddles.length">{{ riddle.question }}</p>
+                    <input v-if="index < riddles.length" type="text" v-model="riddle.userAnswer"
+                        placeholder="Enter your answer" @keyup.enter="checkAnswer(index)" />
+                    <button v-if="!riddle.isSolved && index < riddles.length" @click="checkAnswer(index)"
+                        class="submit-button">Submit</button>
+                    <p v-if="riddle.isSolved && index < riddles.length" class="location-message">{{
+                        riddle.locationMessage }}</p>
+                    <p v-else-if="riddle.hasAttempted && !riddle.isSolved && index < riddles.length"
+                        class="error-message">Incorrect! Try again.</p>
+                    <button v-if="!riddle.isSolved && index < riddles.length" @click="nextRiddle"
+                        class="next-button">Next Riddle</button>
+                </div>
+                <div v-if="currentStep === riddles.length" class="riddle-section"
+                    :class="{ 'solved-riddle': finalRiddleSolved }">
+                    <h2>Riddle 5</h2>
+                    <SudokuGrid @solved="handleSudokuSolved" />
+                    <div v-if="sudokuSolved">
+                        <p>
+                            Well done Touti! Sudoku solved!<br>
+                            You had to input the numbers: 1 2 5 9 6<br>
+                            Wait.... We can combine these the following way: 12 5 96<br>
+                            Oh sneaky... 12/5/96<br>
+                            <br>
+                            Anyway - Sudokus as we know them today were created in Japan.<br>
+                            Can you guess what's the next and final destination?
+                        </p>
+                        <input type="text" v-model="finalRiddleAnswer" placeholder="Enter your answer"
+                            @keyup.enter="checkFinalAnswer" />
+                        <button v-if="!finalRiddleSolved" @click="checkFinalAnswer"
+                            class="submit-button">Submit</button>
+                        <p v-if="finalRiddleSolved">
+                            Well done Touti, you're going to Tokii for your afternoon tea! Yey perfect way to wrap up
+                            our adventure! 🍵<br>
+                            Once you're there, click on the button below to complete the hunt!<br>
+                        </p>
+                        <button v-if="finalRiddleSolved" @click="completeHunt" class="next-button">I'm a Tokii</button>
+                    </div>
                 </div>
             </transition-group>
         </div>
 
         <!-- Add this button for testing purposes -->
-        <!-- <button @click="bypassRiddles" class="bypass-button">Bypass Riddles</button> -->
+        <button @click="bypassRiddles" class="bypass-button">Bypass Riddles</button>
     </div>
 </template>
 
 <script>
 import confetti from 'canvas-confetti';
+import SudokuGrid from './Sudoku.vue';
 
 export default {
     name: "ScavengerHunt",
+    components: {
+        SudokuGrid,
+    },
     data() {
         return {
             currentStep: 0,
@@ -85,16 +142,11 @@ export default {
                     isSolved: false,
                     hasAttempted: false,
                     locationMessage: "🧁 Sweet tooth alert! Let's grab some cupcakes at Lola's in Selfridges!"
-                },
-                {
-                    question: "🍵 Last riddle, Touti! After a long day, let's relax with a warm drink. Imagine your favorite morning drink and \"Drops of God\" had a kid... where are we heading? 🇯🇵",
-                    answer: "japanese tea",
-                    userAnswer: "",
-                    isSolved: false,
-                    hasAttempted: false,
-                    locationMessage: "🍵 Chill out with some Japanese tea at TOKii. Perfect way to wrap up our adventure!"
-                },
+                }
             ],
+            sudokuSolved: false,
+            finalRiddleAnswer: "",
+            finalRiddleSolved: false,
         };
     },
     methods: {
@@ -145,7 +197,15 @@ export default {
                 riddle.hasAttempted = true;
             });
             this.currentStep = this.riddles.length;
-        }
+        },
+        handleSudokuSolved() {
+            this.sudokuSolved = true;
+        },
+        checkFinalAnswer() {
+            if (this.finalRiddleAnswer.trim().toLowerCase() === "tokii") {
+                this.finalRiddleSolved = true;
+            }
+        },
     },
 };
 </script>
