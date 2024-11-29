@@ -35,33 +35,25 @@
 
         <!-- Congratulatory Message -->
         <div v-else-if="huntCompleted" class="congrats-container">
-            <h1>Congrats Touti! Enjoy your tea!</h1>
+            <h1>Congrats Touti, you solved all the riddles!</h1>
             <canvas id="confetti-canvas"></canvas>
             <div v-if="showMessage" class="message-container">
-                <h2>Oh and one more thing - here's something I wrote for you:</h2>
-                <p>{{ personalMessage }}</p>
+                <h2>Oh and one more thing - here's something I wrote for you...</h2>
             </div>
         </div>
 
         <!-- Riddle Steps -->
         <div v-else class="riddles-container">
             <transition-group name="fade" tag="div">
-                <div v-for="(riddle, index) in riddles" :key="index" class="riddle-section"
-                    :class="{ 'solved-riddle': riddle.isSolved }" v-show="currentStep > index">
-                    <h2 v-if="index < riddles.length">Riddle {{ index + 1 }}</h2>
-                    <p v-if="index < riddles.length">{{ riddle.question }}</p>
-                    <input v-if="index < riddles.length" type="text" v-model="riddle.userAnswer"
-                        placeholder="Enter your answer" @keyup.enter="checkAnswer(index)" />
-                    <button v-if="!riddle.isSolved && index < riddles.length" @click="checkAnswer(index)"
-                        class="submit-button">Submit</button>
-                    <p v-if="riddle.isSolved && index < riddles.length" class="location-message">{{
-                        riddle.locationMessage }}</p>
-                    <p v-else-if="riddle.hasAttempted && !riddle.isSolved && index < riddles.length"
-                        class="error-message">Incorrect! Try again.</p>
-                    <button v-if="!riddle.isSolved && index < riddles.length" @click="nextRiddle"
-                        class="next-button">Next Riddle</button>
-                </div>
-                <div v-if="currentStep === riddles.length" class="riddle-section"
+                <RiddleComponent
+                    v-for="(riddle, index) in renderedRidles()"
+                    :key="index"
+                    :riddle="riddle"
+                    :currentStep="currentStep"
+                    @solved="updateSolvedState(index, $event)"
+                    @next-riddle="nextRiddle"
+                />
+                <div v-if="currentStep === riddles.length + 1" class="riddle-section"
                     :class="{ 'solved-riddle': finalRiddleSolved }">
                     <h2>Riddle 5</h2>
                     <SudokuGrid @solved="handleSudokuSolved" />
@@ -91,11 +83,12 @@
         </div>
 
         <!-- Add this button for testing purposes -->
-        <button @click="bypassRiddles" class="bypass-button">Bypass Riddles</button>
+        <!-- <button @click="bypassRiddles" class="bypass-button">Bypass Riddles</button> -->
     </div>
 </template>
 
 <script>
+import RiddleComponent from './Riddle.vue';
 import confetti from 'canvas-confetti';
 import SudokuGrid from './Sudoku.vue';
 
@@ -103,47 +96,41 @@ export default {
     name: "ScavengerHunt",
     components: {
         SudokuGrid,
+        RiddleComponent
     },
     data() {
         return {
             currentStep: 0,
             huntCompleted: false,
             showMessage: false,
-            personalMessage: "This is a placeholder for a cute message you want to write.",
             riddles: [
                 {
+                    index: 1,
                     question: "🌟 Let's start with something simple! Practice your Arabic: What does \"chajrit 3id\" mean? 🎄",
                     answer: "christmas tree",
-                    userAnswer: "",
-                    isSolved: false,
-                    hasAttempted: false,
                     locationMessage: "🎄 Let's kick things off at Covent Garden with a dazzling Christmas Tree!"
                 },
                 {
+                    index: 2,
                     question: "🏛️ Time to test your architecture vocabulary! What do we call a corridor formed by a line of arches? 🤔",
                     answer: "arcades",
                     userAnswer: "",
-                    isSolved: false,
-                    hasAttempted: false,
                     locationMessage: "✨ Time to wander through the cool arcades on Piccadilly and Burlington!"
                 },
                 {
+                    index: 3,
                     question: "🎉 You're doing great, Touti! Our next stop is a seasonal village you only see at year's end. Where are we going? 🎄",
                     answer: "christmas market",
-                    userAnswer: "",
-                    isSolved: false,
-                    hasAttempted: false,
                     locationMessage: "🎪 Hyde Park Winter Wonderland is calling! Let's dive into the festive fun!"
                 },
                 {
+                    index: 4,
                     question: "🎂 I love traditions! I usually celebrate birthdays 3 days later, but this year, I'm keeping another tradition. What are we doing next? 🧁",
                     answer: "cupcakes",
-                    userAnswer: "",
-                    isSolved: false,
-                    hasAttempted: false,
                     locationMessage: "🧁 Sweet tooth alert! Let's grab some cupcakes at Lola's in Selfridges!"
                 }
             ],
+            solvedRiddles: new Set(),
             sudokuSolved: false,
             finalRiddleAnswer: "",
             finalRiddleSolved: false,
@@ -153,21 +140,22 @@ export default {
         startHunt() {
             this.currentStep = 1;
         },
-        checkAnswer(index) {
-            const riddle = this.riddles[index];
-            riddle.hasAttempted = true;
-            if (riddle.userAnswer.trim().toLowerCase() === riddle.answer.toLowerCase()) {
-                riddle.isSolved = true;
-            } else {
-                riddle.isSolved = false;
-            }
-        },
         nextRiddle() {
             this.currentStep++;
         },
         completeHunt() {
             this.huntCompleted = true;
             this.launchConfetti();
+        },
+        updateSolvedState(index, isSolved) {
+            if (isSolved) {
+                this.solvedRiddles.add(index);
+            } else {
+                this.solvedRiddles.delete(index);
+            }
+        },
+        renderedRidles() {
+            return this.riddles.filter((riddle, index) => this.solvedRiddles.has(index) || this.currentStep > index);
         },
         launchConfetti() {
             const duration = 5 * 1000;
@@ -192,9 +180,8 @@ export default {
             }, 250);
         },
         bypassRiddles() {
-            this.riddles.forEach(riddle => {
-                riddle.isSolved = true;
-                riddle.hasAttempted = true;
+            this.riddles.forEach((riddle, index) => {
+                this.solvedRiddles.add(index);
             });
             this.currentStep = this.riddles.length;
         },
@@ -210,7 +197,7 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
 .app-container {
     max-width: 600px;
     margin: 0 auto;
