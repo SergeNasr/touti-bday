@@ -1,16 +1,16 @@
 <template>
   <div id="app">
-    <ScavengerHunt />
+    <ApologyComponent />
   </div>
 </template>
 
 <script>
-import ScavengerHunt from './components/ScavengerHunt.vue';
+import ApologyComponent from './other_components/ApologyComponent.vue';
 
 export default {
   name: 'App',
   components: {
-    ScavengerHunt
+    ApologyComponent
   }
 }
 </script>
